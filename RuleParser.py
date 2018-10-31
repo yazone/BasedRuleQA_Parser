@@ -423,15 +423,3 @@ class RuleParser:
         ret = self.real_match(None,match_string,0)
         return ret,self.keywords,self.keywords_postion,self.lib_names,self.nodes_path
 
-# 外部库查找实现
-def hook_lib_method_impl(match_string,lib_name,params):
-    print("hook_lib_method_impl 库中查找，库名："+lib_name+" 查找实体："+match_string)
-    matched_strings = []
-    for i in range(len(match_string)):
-        search_string = match_string[:i+1]
-        print("search_string:"+search_string+" match_string:"+match_string)
-        if search_string in ['李白','李白冰','将进酒']:
-            matched_strings.append(search_string)
-    
-    print("匹配到的词典："+str(matched_strings))
-    return matched_strings
