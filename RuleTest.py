@@ -78,3 +78,11 @@ if __name__ == '__main__':
     rule_parser.parse(rule)
     # ”李白是谁“命中
     test_sentence(rule_parser,'李白是谁')
+
+    # 加入内置数字测试
+    rule = "[请问]#sys.数字#个人是什么字"
+    print("解析规则："+rule)
+    rule_parser.parse(rule)
+    test_sentence(rule_parser,'三个人是什么字')
+    test_sentence(rule_parser,'请问三个人是什么字')
+    test_sentence(rule_parser,'请问十二个人是什么字')
