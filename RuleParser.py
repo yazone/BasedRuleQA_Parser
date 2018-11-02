@@ -30,7 +30,7 @@ class RuleNode:
 
 class RuleGraph:
     def __init__(self):
-        self.root_node = RuleNode('Root')
+        self.root_node = RuleNode('')
 
     def add_children_node(self,parent_node,node):
         if parent_node == None:
@@ -65,6 +65,7 @@ class RuleGraph:
         
         
 class RuleParser:
+    SYSTEM_LIB_DIGIT = ['零','一','二','三','四','五','六','七','八','九','十','百','千','万','亿','兆','京']
     def __init__(self):
         self.rule_graph = RuleGraph()
         self.keywords = []
@@ -99,6 +100,14 @@ class RuleParser:
             for i in range(len(match_string)):
                 search_string = match_string[:i+1]
                 matched_strings.append(search_string)
+        elif lib_name == 'sys.数字':
+            for i in range(len(match_string)):
+                search_string = match_string[:i+1]
+                current_word = match_string[i]
+                if current_word in self.SYSTEM_LIB_DIGIT:
+                    matched_strings.append(search_string)
+                else:
+                    break
         
         if self.DEBUG_FLAG:
             print("匹配到的词典："+str(matched_strings))
@@ -385,12 +394,7 @@ class RuleParser:
     def real_match(self,current_node,match_string,match_string_start_pos):
         # 默认从Root节点的子节点开始
         if current_node == None:
-            root_childrens = self.rule_graph.get_root_node().get_childrens()
-            if len(root_childrens) == 0:
-                if self.DEBUG_FLAG:
-                    print("real_match ROOT节点没有子节点")
-                return False
-            current_node = self.rule_graph.get_root_node().get_childrens()[0]
+            current_node = self.rule_graph.get_root_node()
         
         # 当前节点信息
         current_node_value = current_node.get_value()
