@@ -110,7 +110,7 @@ class RuleParser:
             for i in range(len(match_string)):
                 search_string = match_string[:i+1]
                 matched_strings.append(search_string)
-        elif lib_name == 'sys.数字':
+        elif lib_name == 'sys.数字' or lib_name == 'sys.整数':
             for i in range(len(match_string)):
                 search_string = match_string[:i+1]
                 current_word = match_string[i]
@@ -153,10 +153,10 @@ class RuleParser:
             gen_len = random.randint(0,10)
             for i in range(0,gen_len):
                 generate_string = generate_string + self.get_random_chinese_char()
-        elif lib_name == 'sys.数字':
+        elif lib_name == 'sys.数字' or lib_name == 'sys.整数':
             gen_len = random.randint(1,4)
             for i in range(0,gen_len):
-                generate_string = generate_string + self.SYSTEM_LIB_DIGIT[random.randint(0,len(self.SYSTEM_LIB_DIGIT-1))]
+                generate_string = generate_string + self.SYSTEM_LIB_DIGIT[random.randint(0,len(self.SYSTEM_LIB_DIGIT)-1)]
         
         if self.DEBUG_FLAG:
             print("生成字符串："+str(generate_string))
@@ -170,7 +170,7 @@ class RuleParser:
             return self.hook_generate_lib_default(lib_name)
         
         if self.generate_lib_hook != None:
-            return self.generate_lib_hook(lib_name,self.match_lib_hook_parms)
+            return self.generate_lib_hook(lib_name,self.generate_lib_hook_parms)
 
         return ''
 
