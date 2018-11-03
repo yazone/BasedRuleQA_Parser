@@ -67,18 +67,18 @@ class RuleGraph:
         
 class RuleParser:
     SYSTEM_LIB_DIGIT = ['零','一','二','三','四','五','六','七','八','九','十','百','千','万','亿','兆','京']
+
     def __init__(self):
         self.rule_graph = RuleGraph()
-        self.keywords = []
-        self.keywords_postion = []
-        self.lib_names = []
-        self.nodes_path = []
         self.match_lib_hook = None
         self.match_lib_hook_parms = None
         self.generate_lib_hook = None
         self.generate_lib_hook_parms = None
         self.DEBUG_FLAG = False
 
+    """
+        调试开关
+    """
     def set_debug(self,flag):
         self.DEBUG_FLAG = flag
 
@@ -320,7 +320,7 @@ class RuleParser:
     """
         处理文本类型节点
     """
-    def real_match_process_fulltext(self,current_node,match_string,match_string_start_pos):
+    def real_match_process_fulltext(self,current_node,match_string,match_string_start_pos,keywords,keywords_postion,lib_names,nodes_path):
         # 当前节点信息
         current_node_value = current_node.get_value()
         current_node_type = current_node.get_type()
@@ -329,7 +329,7 @@ class RuleParser:
 
         # 没匹配到节点文本，返回匹配失败，同时删除该节点路径记录
         if not match_string.startswith(current_node_value):
-            node_pop = self.nodes_path.pop()
+            node_pop = nodes_path.pop()
             if self.DEBUG_FLAG:
                 print("real_match_process_fulltext 文本未匹配，节点路径，弹出:"+str(node_pop))
             return False
@@ -352,7 +352,7 @@ class RuleParser:
         
         # 匹配文本与子节点，深度优先递归
         for children in childrens:
-            ret = self.real_match(children,next_match_string,next_match_string_start_pos)
+            ret = self.real_match(children,next_match_string,next_match_string_start_pos,keywords,keywords_postion,lib_names,nodes_path)
             if ret == True:
                 if self.DEBUG_FLAG:
                     print("real_match_process_fulltext 子句匹配成功："+next_match_string)
@@ -363,7 +363,7 @@ class RuleParser:
             print("real_match_process_fulltext 子句匹配失败："+next_match_string)
 
         # 没有一个子节点匹配到了文本
-        node_pop = self.nodes_path.pop()
+        node_pop = nodes_path.pop()
         if self.DEBUG_FLAG:
             print("real_match_process_fulltext 节点路径，弹出:"+str(node_pop))
         
@@ -372,7 +372,7 @@ class RuleParser:
     """
         处理库类型节点
     """
-    def real_match_process_lib(self,current_node,match_string,match_string_start_pos):
+    def real_match_process_lib(self,current_node,match_string,match_string_start_pos,keywords,keywords_postion,lib_names,nodes_path):
         # 当前节点信息
         current_node_value = current_node.get_value()
         current_node_type = current_node.get_type()
@@ -388,7 +388,7 @@ class RuleParser:
         if len(matched_strings) == 0:
             if self.DEBUG_FLAG:
                 print("real_match_process_lib 句子没有匹配到词典："+match_string)
-            node_pop = self.nodes_path.pop()
+            node_pop = nodes_path.pop()
             if self.DEBUG_FLAG:
                 print("real_match_process_lib 节点路径，弹出:"+str(node_pop))
             return False
@@ -398,11 +398,11 @@ class RuleParser:
             if self.DEBUG_FLAG:
                 print("real_match_process_lib 处理知识库词条："+matched_string+ " 匹配语句："+match_string)
             # 作为关键词记录，作为抽取关键词
-            self.keywords.append(matched_string)
+            keywords.append(matched_string)
             matched_string_len = len(matched_string)
-            self.keywords_postion.append((match_string_start_pos,matched_string_len))
+            keywords_postion.append((match_string_start_pos,matched_string_len))
             # 记录当前库名，作为抽取库
-            self.lib_names.append(current_node_value)
+            lib_names.append(current_node_value)
             # 下一个需要处理的字句
             next_match_string_start_pos = match_string_start_pos + matched_string_len
             next_match_string = match_string[matched_string_len:]
@@ -417,7 +417,7 @@ class RuleParser:
             
             # 匹配文本与子节点，深度优先递归
             for children in childrens:
-                ret = self.real_match(children,next_match_string,next_match_string_start_pos)
+                ret = self.real_match(children,next_match_string,next_match_string_start_pos,keywords,keywords_postion,lib_names,nodes_path)
                 if ret == True:
                     if self.DEBUG_FLAG:
                         print("real_match_process_lib 子句匹配成功："+next_match_string)
@@ -425,14 +425,14 @@ class RuleParser:
                     return True
             
             # 当前词条无法进行下一个节点，需要弹出关键词以及知识库名称，不做记录
-            keyword = self.keywords.pop()
-            lib_name = self.lib_names.pop()
-            self.keywords_postion.pop()
+            keyword = keywords.pop()
+            lib_name = lib_names.pop()
+            keywords_postion.pop()
             if self.DEBUG_FLAG:
                 print("pop出关键词："+keyword+" keywords:"+str(self.keywords) + " pop出库名："+lib_name+" lib:"+str(self.lib_names))
 
         # 没有一个子节点匹配到了文本
-        node_pop = self.nodes_path.pop()
+        node_pop = nodes_path.pop()
         if self.DEBUG_FLAG:
             print("real_match_process_lib 节点路径，弹出:"+str(node_pop))
         
@@ -442,7 +442,7 @@ class RuleParser:
     """
         匹配文本与节点
     """
-    def real_match(self,current_node,match_string,match_string_start_pos):
+    def real_match(self,current_node,match_string,match_string_start_pos,keywords,keywords_postion,lib_names,nodes_path):
         # 默认从Root节点的子节点开始
         if current_node == None:
             current_node = self.rule_graph.get_root_node()
@@ -454,15 +454,15 @@ class RuleParser:
             print("real_match 当前节点，值："+current_node_value+" 类型："+current_node_type)
 
         # 记录节点路径
-        self.nodes_path.append(current_node)
+        nodes_path.append(current_node)
         if self.DEBUG_FLAG:
             print("real_match 节点路径，添加:"+str(current_node))
 
         # 处理节点
         if current_node_type == TOKEN_TYPE_SELECT_FULL: # 处理全匹配字段
-            return self.real_match_process_fulltext(current_node,match_string,match_string_start_pos)
+            return self.real_match_process_fulltext(current_node,match_string,match_string_start_pos,keywords,keywords_postion,lib_names,nodes_path)
         elif current_node_type == TOKEN_TYPE_SELECT_LIB: # 处理库中查找字段
-            return self.real_match_process_lib(current_node,match_string,match_string_start_pos)
+            return self.real_match_process_lib(current_node,match_string,match_string_start_pos,keywords,keywords_postion,lib_names,nodes_path)
 
         return False
 
@@ -470,13 +470,12 @@ class RuleParser:
         匹配字符串
     """
     def match(self,match_string):
-        self.match_string_start_pos = 0
-        self.keywords = []
-        self.keywords_postion = []
-        self.lib_names = []
-        self.nodes_path = []
-        ret = self.real_match(None,match_string,0)
-        return ret,self.keywords,self.keywords_postion,self.lib_names,self.nodes_path
+        keywords = []
+        keywords_postion = []
+        lib_names = []
+        nodes_path = []
+        ret = self.real_match(None,match_string,0,keywords,keywords_postion,lib_names,nodes_path)
+        return ret,keywords,keywords_postion,lib_names,nodes_path
 
     """
         生成字符串
