@@ -1,3 +1,4 @@
+import random
 
 TOKEN_TYPE_SELECT_LIB = 'LIB'
 TOKEN_TYPE_SELECT_FULL = 'FULL'
@@ -74,6 +75,8 @@ class RuleParser:
         self.nodes_path = []
         self.match_lib_hook = None
         self.match_lib_hook_parms = None
+        self.generate_lib_hook = None
+        self.generate_lib_hook_parms = None
         self.DEBUG_FLAG = False
 
     def set_debug(self,flag):
@@ -87,9 +90,16 @@ class RuleParser:
         self.match_lib_hook_parms = hook_params
 
     """
+        设置外部库生成函数
+    """
+    def set_generate_lib_hook(self,hook_method,hook_params):
+        self.generate_lib_hook = hook_method
+        self.generate_lib_hook_parms = hook_params
+
+    """
         内置知识库实现
     """
-    def hook_lib_default(self,match_string,lib_name):
+    def hook_match_lib_default(self,match_string,lib_name):
         if self.DEBUG_FLAG:
             print("hook_lib_default 库中查找，库名："+lib_name+" 查找实体："+match_string)
         
@@ -118,10 +128,51 @@ class RuleParser:
     """
     def match_lib(self,match_string,lib_name):
         if lib_name.startswith('sys.'):
-            return self.hook_lib_default(match_string,lib_name)
+            return self.hook_match_lib_default(match_string,lib_name)
         
         if self.match_lib_hook != None:
             return self.match_lib_hook(match_string,lib_name,self.match_lib_hook_parms)
+
+        return []
+
+    # 获取随机的字
+    def get_random_chinese_char(self):
+        val = random.randint(0x4e00, 0x9fbf)
+        return chr(val)
+
+    """
+        内置知识库生成实现
+    """
+    def hook_generate_lib_default(self,lib_name):
+        if self.DEBUG_FLAG:
+            print("hook_generate_lib_default 库中生成，库名："+lib_name)
+        
+        generate_string = ''
+
+        if lib_name == 'sys.任意文本':
+            gen_len = random.randint(0,10)
+            for i in range(0,gen_len):
+                generate_string = generate_string + self.get_random_chinese_char()
+        elif lib_name == 'sys.数字':
+            gen_len = random.randint(1,4)
+            for i in range(0,gen_len):
+                generate_string = generate_string + self.SYSTEM_LIB_DIGIT[random.randint(0,len(self.SYSTEM_LIB_DIGIT-1))]
+        
+        if self.DEBUG_FLAG:
+            print("生成字符串："+str(generate_string))
+        return generate_string
+    
+    """
+        生成库
+    """
+    def generate_lib(self,lib_name):
+        if lib_name.startswith('sys.'):
+            return self.hook_generate_lib_default(lib_name)
+        
+        if self.generate_lib_hook != None:
+            return self.generate_lib_hook(lib_name,self.match_lib_hook_parms)
+
+        return ''
 
     def travel(self):
         self.rule_graph.travel(None)
@@ -427,3 +478,38 @@ class RuleParser:
         ret = self.real_match(None,match_string,0)
         return ret,self.keywords,self.keywords_postion,self.lib_names,self.nodes_path
 
+    """
+        生成字符串
+    """
+    def generate(self):
+        keywords = []
+        keywords_postion = []
+        lib_names = []
+        nodes_path = []
+        generate_string = ''
+        current_node = self.rule_graph.get_root_node()
+
+        while(True):
+            # 当前节点信息
+            current_node_value = current_node.get_value()
+            current_node_type = current_node.get_type()
+
+            if current_node_type == TOKEN_TYPE_SELECT_FULL: # 处理全匹配字段
+                generate_string += current_node_value
+                nodes_path.append(current_node)
+            elif current_node_type == TOKEN_TYPE_SELECT_LIB: # 处理库中查找字段
+                keyword = self.generate_lib(current_node_value)
+                lib_names.append(current_node_value)
+                keywords.append(keyword)
+                keywords_postion.append((len(generate_string),len(keyword)))
+                nodes_path.append(current_node)
+                generate_string += keyword
+
+            children_nodes = current_node.get_childrens()
+            if len(children_nodes) == 0:
+                break
+
+            current_node = children_nodes[random.randint(0,len(children_nodes) - 1)]
+
+        return generate_string,keywords,keywords_postion,lib_names,nodes_path
+            

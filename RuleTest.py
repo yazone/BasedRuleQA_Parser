@@ -1,9 +1,11 @@
+import random
 from RuleParser import RuleParser
 
 # 用词典可以快速匹配到
 poet_names = {'李白':1,'李白冰':2,'杜甫':3}
 poetry_names = {'将进酒':1,'沁园春':2}
 poetry_sentences = {'黄河之水天上来':1,'海上升明月':2}
+music_names = {'海阔天空':1,'匆匆':2}
 
 # 外部库查找实现
 def hook_lib_method_impl(match_string,lib_name,params):
@@ -19,6 +21,8 @@ def hook_lib_method_impl(match_string,lib_name,params):
         current_database = poetry_names
     elif lib_name == '诗句':
         current_database = poetry_sentences
+    elif lib_name == '歌曲':
+        current_database = music_names
     else:
         # print("hook_lib_method_impl 未找到库，库名："+lib_name+" 查找句子："+match_string)
         return matched_strings
@@ -32,11 +36,39 @@ def hook_lib_method_impl(match_string,lib_name,params):
     # print("hook_lib_method_impl 库："+lib_name+" 全部匹配到的关键词："+str(matched_strings))
     return matched_strings
 
+# 外部库生成实现
+def hook_generate_lib_method_impl(lib_name,params):
+    #print("hook_generate_lib_method_impl 库名："+lib_name)
+    generate_string = ''
+    current_database = None
+    if lib_name == '诗人':
+        current_database = poet_names
+    elif lib_name == '诗名':
+        current_database = poetry_names
+    elif lib_name == '诗句':
+        current_database = poetry_sentences
+    elif lib_name == '歌曲':
+        current_database = music_names
+    else:
+        # print("hook_generate_lib_method_impl 未找到库，库名："+lib_name)
+        return generate_string
+
+    values_len = len(current_database.keys())
+    if values_len == 0:
+        return generate_string
+    
+    random_index = random.randint(0,values_len - 1)
+    for i,item in enumerate(current_database):
+        if i == random_index:
+            generate_string = item
+            break
+
+    return generate_string
 
 def test_sentence(rule_parser,sentence):
     success,keywords,keywords_pos,lib_names,nodes_path = rule_parser.match(sentence)
     if success:
-        print("\n=================================================================")
+        print("\n=========================匹配句子=================================")
         print("句子："+sentence)
         print("关键词："+str(keywords)+" \n关联库："+str(lib_names)+" \n位置："+str(keywords_pos))
         path_trace = ''
@@ -86,3 +118,21 @@ if __name__ == '__main__':
     test_sentence(rule_parser,'三个人是什么字')
     test_sentence(rule_parser,'请问三个人是什么字')
     test_sentence(rule_parser,'请问十二个人是什么字')
+
+    # 根据规则随机生成句子
+    rule = "#sys.任意文本##诗人#[的]#诗名#的(介绍|说明|#歌曲#)[啊|哦|额]"
+    rule_parser.parse(rule)
+    rule_parser.set_generate_lib_hook(hook_generate_lib_method_impl,'HI')
+    sentence,keywords,keywords_pos,lib_names,nodes_path = rule_parser.generate()
+    print("\n======================生成句子=====================================")
+    print("句子："+sentence)
+    print("关键词："+str(keywords)+" \n关联库："+str(lib_names)+" \n位置："+str(keywords_pos))
+    path_trace = ''
+    for node in nodes_path:
+        if path_trace == '':
+            path_trace = str(node)
+        else:
+            path_trace += "-->"+str(node)
+    print("节点路径："+path_trace)
+    print("=================================================================\n")
+    test_sentence(rule_parser,sentence)
